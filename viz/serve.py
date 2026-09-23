@@ -27,6 +27,7 @@ AGENT: VizAgent | None = None
 MODEL_ID = ""
 WEB_DIR = Path(__file__).resolve().parent.parent / "viz-web"
 LOAD_MS = 0.0
+REQ_SEQ = 0  # increments per /api/predict call — proof each Run is a fresh inference
 
 MIME = {
     ".html": "text/html; charset=utf-8",
@@ -99,8 +100,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(state, dict) or not isinstance(questions, dict) or not questions:
                 raise ValueError("body must be {state: {...}, questions: {<id>: {...}}}")
             assert AGENT is not None, "model not loaded"
+            global REQ_SEQ
+            REQ_SEQ += 1
             answers, trace = AGENT.predict_verbose(state, questions)
             self._send_json({
+                "request_id": REQ_SEQ,
                 "answers": answers["answers"],
                 "usage": answers.get("usage", {}),
                 "model": answers.get("model", MODEL_ID),

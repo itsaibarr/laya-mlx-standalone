@@ -3,276 +3,145 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laya Live Playground — ask, decide, see why</title>
+<title>Laya — ask, get a decision</title>
 <style>
   :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --dim: #8b949e; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--fg); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; padding: 24px; max-width: 1100px; margin: 0 auto; }
-  h1 { font-size: 20px; color: var(--accent); margin-bottom: 4px; }
-  .subtitle { color: var(--dim); font-size: 12px; margin-bottom: 20px; }
-  .status { font-size: 12px; margin-bottom: 20px; padding: 8px 12px; border-radius: 6px; background: #161b22; border: 1px solid #30363d; }
-  .status.live { border-color: var(--green); color: var(--green); }
-  .status.down { border-color: var(--yellow); color: var(--yellow); }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
-  .card h2 { font-size: 13px; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
-  label { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4px; }
-  textarea, input[type=text], select { width: 100%; background: #0d1117; color: var(--fg); border: 1px solid #30363d; border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 13px; }
-  textarea { min-height: 90px; resize: vertical; }
-  textarea.criteria { min-height: 110px; }
-  button { background: var(--accent); color: #0d1117; border: none; border-radius: 6px; padding: 10px 20px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 14px; }
-  button:disabled { opacity: 0.5; cursor: wait; }
-  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px; font-size: 12px; margin: 4px 4px 0 0; }
-  .hint { font-size: 11px; color: var(--dim); margin-top: 4px; }
-  .pipeline { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-  .stage { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; text-align: center; min-width: 90px; }
-  .stage.active { border-color: var(--accent); box-shadow: 0 0 8px rgba(88,166,255,0.25); }
-  .stage-label { font-size: 10px; color: var(--dim); text-transform: uppercase; }
-  .arrow { color: var(--dim); }
-  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .bar-label { width: 110px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-track { flex: 1; height: 18px; background: #21262d; border-radius: 3px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
-  .bar-fill.selected { background: var(--green); }
-  .bar-value { width: 56px; text-align: right; font-size: 13px; }
-  .gate { margin-top: 14px; padding: 10px 14px; border-radius: 6px; font-size: 13px; }
-  .gate.auto { background: rgba(63,185,80,0.15); border: 1px solid var(--green); color: var(--green); }
-  .gate.human { background: rgba(210,153,34,0.15); border: 1px solid var(--yellow); color: var(--yellow); }
-  .action-box { margin-top: 14px; padding: 10px 14px; border-radius: 6px; background: #0d1117; border: 1px solid #30363d; font-size: 13px; }
-  .action-box .warn { color: var(--dim); font-size: 11px; }
-  .meta { color: var(--dim); font-size: 12px; margin-bottom: 8px; }
-  .meta span { margin-right: 16px; }
-  .error { color: var(--red); font-size: 13px; margin-top: 12px; white-space: pre-wrap; }
-  pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 12px; overflow-x: auto; max-height: 320px; margin-top: 12px; }
-  .hidden { display: none; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, 'SF Pro Text', sans-serif; font-size: 16px; padding: 32px 20px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
+  .live { color: var(--green); font-size: 12px; margin-bottom: 16px; }
+  .live.down { color: var(--yellow); }
+  textarea { width: 100%; min-height: 110px; background: #161b22; color: var(--fg); border: 1px solid #30363d; border-radius: 10px; padding: 14px; font-family: inherit; font-size: 16px; resize: vertical; }
+  .tasks { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .tasks button { background: transparent; color: var(--accent); border: 1px solid #30363d; border-radius: 20px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+  .tasks button.on { border-color: var(--accent); background: rgba(88,166,255,0.12); }
+  #run { width: 100%; background: var(--accent); color: #0d1117; border: none; border-radius: 10px; padding: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+  #run:disabled { opacity: 0.5; cursor: wait; }
+  #err { color: var(--red); font-size: 14px; margin-top: 12px; white-space: pre-wrap; }
+  #out { margin-top: 24px; display: none; }
+  #out.show { display: block; }
+  .decision { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .decision small { font-size: 14px; color: var(--dim); font-weight: 400; }
+  .proof { font-size: 12px; color: var(--dim); margin-bottom: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { width: 110px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; height: 22px; background: #21262d; border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+  .bar-fill.win { background: var(--green); }
+  .bar-value { width: 52px; text-align: right; font-size: 14px; }
+  .gate { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 14px; }
+  .gate.auto { background: rgba(63,185,80,0.12); border: 1px solid var(--green); color: var(--green); }
+  .gate.human { background: rgba(210,153,34,0.12); border: 1px solid var(--yellow); color: var(--yellow); }
+  .action { margin-top: 12px; padding: 12px 14px; border-radius: 8px; background: #161b22; border: 1px solid #30363d; font-size: 14px; }
+  .action .warn { color: var(--dim); font-size: 12px; }
 </style>
 </head>
 <body>
-<h1>Laya Live Playground</h1>
-<div class="subtitle">Write a question, run the real model, see probabilities + action. Text in, typed decision out — 0 output tokens.</div>
-<div id="status" class="status">checking backend…</div>
+<h1>Laya</h1>
+<div class="sub">Write text. Get a decision with probabilities.</div>
+<div id="live" class="live">connecting…</div>
 
-<div class="grid">
-  <div class="card">
-    <h2>1 · State (what the model sees)</h2>
-    <label for="state">JSON object — any text fields</label>
-    <textarea id="state">{"subject": "Your account will be locked in 24h", "body": "Click here to verify your password immediately"}</textarea>
-    <div>
-      <button class="secondary" data-preset-state="phishing">phishing email</button>
-      <button class="secondary" data-preset-state="ticket">support ticket</button>
-    </div>
-  </div>
-  <div class="card">
-    <h2>2 · Question (what you ask)</h2>
-    <label for="qtype">Decision type</label>
-    <select id="qtype">
-      <option value="choice">choice — pick one label</option>
-      <option value="score">score — ordered levels (list)</option>
-      <option value="noul">noul — yes / no</option>
-    </select>
-    <label for="instructions">Instructions</label>
-    <input type="text" id="instructions" value="Triage this email">
-    <label for="criteria">Criteria — one per line, <code>label: description</code> (choice/noul) or one level per line (score)</label>
-    <textarea id="criteria" class="criteria">phishing: fraudulent attempt to steal credentials or money
-legitimate: genuine message from a real sender
-needs-review: cannot decide, needs a human</textarea>
-    <div class="hint" id="criteria-hint">choice: labels become the options. score: each line is an ordered level. noul: needs true/false lines.</div>
-    <button id="run">▶ Run model</button>
-    <div id="err" class="error"></div>
-  </div>
+<textarea id="q" placeholder="Paste an email, message, or describe a situation…">Your account will be locked in 24h. Click here to verify your password immediately.</textarea>
+<div class="tasks" id="tasks">
+  <button data-t="phishing" class="on">Is it phishing?</button>
+  <button data-t="spam">Is it spam?</button>
+  <button data-t="urgent">Is it urgent?</button>
+  <button data-t="refund">Wants a refund?</button>
 </div>
+<button id="run">Decide</button>
+<div id="err"></div>
 
-<div id="results" class="hidden">
-  <div class="meta" id="meta"></div>
-  <div class="pipeline" id="pipeline"></div>
-  <div class="grid">
-    <div class="card">
-      <h2>Probabilities</h2>
-      <div id="bars"></div>
-      <div id="gate" class="gate"></div>
-      <div class="action-box" id="action"></div>
-    </div>
-    <div class="card">
-      <h2>Internals</h2>
-      <div id="internals"></div>
-      <h2 style="margin-top:16px;">Raw response</h2>
-      <pre id="raw"></pre>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Saved runs (no backend needed)</h2>
-  <button class="secondary" id="load-demo">demo.jsonl</button>
-  <button class="secondary" id="load-real">real-email.jsonl</button>
-  <label for="file" style="margin-top:10px;">…or load a capture file</label>
-  <input type="file" id="file" accept=".jsonl,.json">
+<div id="out">
+  <div class="decision" id="decision"></div>
+  <div class="proof" id="proof"></div>
+  <div id="bars"></div>
+  <div id="gate" class="gate"></div>
+  <div class="action" id="action"></div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const STAGES = ['Tokenize', 'Encode', 'Score [MASK]', 'Calibrate', 'Decide'];
+// Each task = fixed question the model answers about YOUR text.
+const TASKS = {
+  phishing: { type: 'choice', instructions: 'What is this message?',
+    criteria: { phishing: 'fraudulent attempt to steal credentials or money',
+      legitimate: 'genuine message from a real sender',
+      'needs-review': 'cannot decide, needs a human' } },
+  spam: { type: 'noul', instructions: 'Is this message unsolicited spam or bulk marketing?' },
+  urgent: { type: 'noul', instructions: 'Does this message communicate time pressure or a deadline?' },
+  refund: { type: 'noul', instructions: 'Does the writer ask for money back?' },
+};
+let task = 'phishing';
+document.querySelectorAll('#tasks button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#tasks button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); task = b.dataset.t;
+}));
 
-// ---- backend status ----
-let backendLive = false;
+let live = false;
 async function health() {
   try {
-    const r = await fetch('/api/health');
-    const h = await r.json();
-    backendLive = !!(h && h.ok);
-    const el = $('status');
-    el.className = 'status ' + (backendLive ? 'live' : 'down');
-    el.textContent = backendLive
-      ? `● live — model ${h.model} (loaded in ${h.load_ms}ms). Every Run below is real inference.`
-      : '○ backend not detected — Run needs `python3 viz/serve.py`. Saved runs below still work.';
-    $('run').disabled = !backendLive;
+    const r = await fetch('/api/health'); const h = await r.json();
+    live = !!(h && h.ok);
+    $('live').className = 'live' + (live ? '' : ' down');
+    $('live').textContent = live ? `● live model: ${h.model}` : '○ backend offline — start `python3 viz/serve.py`';
+    $('run').disabled = !live;
   } catch (e) {
-    const el = $('status');
-    el.className = 'status down';
-    el.textContent = '○ backend not detected — Run needs `python3 viz/serve.py`. Saved runs below still work.';
+    $('live').className = 'live down';
+    $('live').textContent = '○ backend offline — start `python3 viz/serve.py`';
     $('run').disabled = true;
   }
 }
 
-// ---- question builder ----
-function buildQuestions() {
-  const type = $('qtype').value;
-  const instructions = $('instructions').value.trim();
-  if (!instructions) throw new Error('instructions is required');
-  const lines = $('criteria').value.split('\n').map(s => s.trim()).filter(Boolean);
-  const q = { type, instructions };
-  if (type === 'score') {
-    if (!lines.length) throw new Error('score needs at least one level line');
-    q.criteria = lines.map(l => l.includes(':') ? l.split(':').slice(1).join(':').trim() || l : l);
-  } else {
-    const crit = {};
-    for (const l of lines) {
-      const i = l.indexOf(':');
-      if (i < 0) throw new Error(`line needs "label: description" — got: ${l}`);
-      crit[l.slice(0, i).trim()] = l.slice(i + 1).trim();
-    }
-    if (type === 'choice' && !Object.keys(crit).length) throw new Error('choice needs at least one label');
-    if (Object.keys(crit).length) q.criteria = crit;
-  }
-  return { q1: q };
-}
-
-// ---- run ----
 $('run').addEventListener('click', async () => {
   $('err').textContent = '';
-  let state, questions;
+  const text = $('q').value.trim();
+  if (!text) { $('err').textContent = 'Write something first.'; return; }
+  $('run').disabled = true; $('run').textContent = 'Thinking…';
   try {
-    state = JSON.parse($('state').value);
-    if (typeof state !== 'object' || state === null || Array.isArray(state)) throw new Error('state must be a JSON object');
-    questions = buildQuestions();
-  } catch (e) { $('err').textContent = e.message; return; }
-  $('run').disabled = true;
-  $('run').textContent = 'running…';
-  try {
-    const r = await fetch('/api/predict', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, questions }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-    render(data.answers.q1, data.usage, data.stages, data.internals, data);
+    const r = await fetch('/api/predict', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: { text }, questions: { q1: TASKS[task] } }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    show(d.answers.q1, d.usage, d.stages, d.request_id);
   } catch (e) { $('err').textContent = e.message; }
-  $('run').disabled = false;
-  $('run').textContent = '▶ Run model';
+  $('run').disabled = false; $('run').textContent = 'Decide';
 });
 
-// ---- render (shared by live + saved runs) ----
-function render(ans, usage, stages, internals, full) {
-  $('results').classList.remove('hidden');
-  usage = usage || {}; stages = stages || {}; internals = internals || {};
-  $('meta').innerHTML =
-    `<span>tokens in: ${usage.input_tokens ?? '?'}</span>` +
-    `<span>tokens out: ${usage.output_tokens ?? '?'}</span>` +
-    `<span>infer: ${stages.total_ms ?? '?'} ms</span>` +
-    (stages.load_ms ? `<span>model load: ${stages.load_ms} ms</span>` : '');
-  $('pipeline').innerHTML = STAGES.map((s, i) =>
-    `<div class="stage${i === STAGES.length - 1 ? ' active' : ''}"><div class="stage-label">${s}</div></div>` +
-    (i < STAGES.length - 1 ? '<div class="arrow">→</div>' : '')).join('');
-
-  const probs = ans.probabilities || {};
-  const selected = ans.choice ?? (ans.noul !== undefined ? String(ans.noul) : null);
-  let bars = '';
-  if (ans.type === 'noul') {
-    const pTrue = ans.noul;
-    bars = barRow('true', pTrue, pTrue >= 0.5) + barRow('false', 1 - pTrue, pTrue < 0.5);
+function show(a, usage, stages, reqId) {
+  $('out').classList.add('show');
+  usage = usage || {}; stages = stages || {};
+  let title, probs;
+  if (a.type === 'noul') {
+    const yes = a.noul;
+    title = (yes >= 0.5 ? 'YES' : 'NO') + ` <small>${(yes * 100).toFixed(0)}% sure</small>`;
+    probs = [['yes', yes], ['no', 1 - yes]];
   } else {
-    bars = Object.entries(probs).sort((a, b) => b[1] - a[1])
-      .map(([label, p]) => barRow(label, p, label === selected)).join('');
+    title = `${a.choice} <small>${((a.probabilities[a.choice] || 0) * 100).toFixed(0)}%</small>`;
+    probs = Object.entries(a.probabilities || {}).sort((x, y) => y[1] - x[1]);
   }
-  if (ans.type === 'score') {
-    bars += `<div class="meta" style="margin-top:8px">expected level: <b>${ans.score}</b>${ans.legend ? ' — ' + Object.entries(ans.legend).map(([k, v]) => `${k}=${v}`).join(', ') : ''}</div>`;
-  }
-  $('bars').innerHTML = bars;
-
-  const conf = ans.confidence ?? 0;
-  const gate = $('gate');
-  if (ans.type === 'noul' && ans.confidence === undefined) {
-    gate.className = 'gate human';
-    gate.textContent = 'noul has no confidence field — P(true) is the belief. Gate on a threshold you choose.';
-  } else if (conf >= 0.85) {
-    gate.className = 'gate auto';
-    gate.textContent = `confidence gate: ${Number(conf).toFixed(4)} ≥ 0.85 → AUTO`;
-  } else {
-    gate.className = 'gate human';
-    gate.textContent = `confidence gate: ${Number(conf).toFixed(4)} < 0.85 → HUMAN REVIEW`;
-  }
-
-  const act = ans.action && ans.action.act_probability;
+  $('decision').innerHTML = title;
+  // Proof this is a fresh inference: server request #, ms that varies, tokens counted from YOUR text.
+  $('proof').textContent =
+    `run #${reqId ?? '?'} · ${stages.total_ms ?? '?'} ms · ${usage.input_tokens ?? '?'} input tokens · 0 output tokens`;
+  const top = probs.length ? probs[0][0] : null;
+  $('bars').innerHTML = probs.map(([l, p]) =>
+    `<div class="bar-row"><div class="bar-label">${l}</div>` +
+    `<div class="bar-track"><div class="bar-fill${l === top ? ' win' : ''}" style="width:${(p * 100).toFixed(1)}%"></div></div>` +
+    `<div class="bar-value">${Number(p).toFixed(2)}</div></div>`).join('');
+  const conf = a.confidence;
+  const g = $('gate');
+  if (a.type === 'noul' && conf === undefined) {
+    g.className = 'gate human'; g.textContent = 'Yes/no models report no confidence — the probability is the belief.';
+  } else if (conf >= 0.85) { g.className = 'gate auto'; g.textContent = `High confidence (${Number(conf).toFixed(2)}) — safe to act automatically.`; }
+  else { g.className = 'gate human'; g.textContent = `Low confidence (${Number(conf).toFixed(2)}) — a human should review.`; }
+  const act = a.action && a.action.act_probability;
   $('action').innerHTML = act !== undefined
-    ? `action.act_probability: <b>${act}</b><br><span class="warn">upstream head is ~always ≈1.0 — do not gate on it; gate on confidence.</span>`
-    : '<span class="warn">no action head in this answer</span>';
-
-  $('internals').innerHTML =
-    `<div class="meta">temperature: ${JSON.stringify(internals.temperature ?? {})}</div>` +
-    (internals.temperature_by_options && Object.keys(internals.temperature_by_options).length
-      ? `<div class="meta">by_options: ${JSON.stringify(internals.temperature_by_options)}</div>` : '') +
-    (internals.marker_logits_raw && internals.marker_logits_raw.length
-      ? `<div class="meta">marker_logits_raw: ${JSON.stringify(internals.marker_logits_raw)}</div>` : '');
-  $('raw').textContent = JSON.stringify(full || ans, null, 2);
-  $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    ? `Model action signal: <b>${act}</b><br><span class="warn">Always ≈1.0 on this checkpoint — informational only, never used for decisions.</span>`
+    : '<span class="warn">No action signal in this answer.</span>';
+  $('out').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-
-function barRow(label, p, selected) {
-  const pct = (Number(p) * 100).toFixed(1);
-  return `<div class="bar-row"><div class="bar-label">${label}</div>` +
-    `<div class="bar-track"><div class="bar-fill${selected ? ' selected' : ''}" style="width:${pct}%"></div></div>` +
-    `<div class="bar-value">${p}</div></div>`;
-}
-
-// ---- saved runs ----
-async function loadRun(path) {
-  $('err').textContent = '';
-  try {
-    const r = await fetch(path);
-    const rec = JSON.parse((await r.text()).split('\n')[0]);
-    render(rec.output, { input_tokens: rec.input && rec.input.tokens, output_tokens: 0 },
-           rec.stages, rec.internals, rec);
-  } catch (e) { $('err').textContent = 'could not load ' + path + ': ' + e.message; }
-}
-$('load-demo').addEventListener('click', () => loadRun('runs/demo.jsonl'));
-$('load-real').addEventListener('click', () => loadRun('runs/real-email.jsonl'));
-$('file').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  try { render(JSON.parse((await f.text()).split('\n')[0]).output
-    ? JSON.parse((await f.text()).split('\n')[0]).output : JSON.parse(await f.text()),
-    {}, {}, {}, JSON.parse(await f.text())); }
-  catch (err) { $('err').textContent = 'Invalid JSON: ' + err.message; }
-});
-
-// ---- state presets ----
-const STATE_PRESETS = {
-  phishing: { subject: 'Your account will be locked in 24h', body: 'Click here to verify your password immediately' },
-  ticket: { message: 'My invoice charged me twice and support has ignored me for a week. I want my money back NOW.' },
-};
-document.querySelectorAll('[data-preset-state]').forEach(b =>
-  b.addEventListener('click', () => { $('state').value = JSON.stringify(STATE_PRESETS[b.dataset.presetState], null, 2); }));
-
 health();
 </script>
 </body>
