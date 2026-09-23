@@ -20,11 +20,14 @@ class VizAgent(Agent):
         total_ms = (time.perf_counter() - t0) * 1000.0
 
         first_qid = next(iter(questions))
+        temp = getattr(self, "temperature", 1.0)
+        by_opts = getattr(self, "temperature_by_options", {})
         trace = {
             "token_ids": [],
             "marker_logits_raw": [],
             "marker_probs_raw": [],
-            "temperature": dict(getattr(self, "temperature", {})),
+            "temperature": list(temp) if isinstance(temp, (list, tuple)) else temp,
+            "temperature_by_options": dict(by_opts) if isinstance(by_opts, dict) else {},
             "encode_ms": 0.0,
             "total_ms": round(total_ms, 2),
         }

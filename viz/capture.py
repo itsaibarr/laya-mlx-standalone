@@ -18,8 +18,11 @@ def main() -> None:
             {"q1": {
                 "type": "choice",
                 "instructions": "Triage this email",
-                "criteria": "phishing, legitimate, or needs-review",
-                "options": ["phishing", "legitimate", "needs-review"],
+                "criteria": {
+                    "phishing": "fraudulent attempt to steal credentials or money",
+                    "legitimate": "genuine message from a real sender",
+                    "needs-review": "cannot decide, needs a human",
+                },
             }},
         ),
     }
