@@ -3,131 +3,115 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laya — ask, get a decision</title>
+<title>Laya — decide anything</title>
 <style>
-  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --dim: #8b949e; }
+  :root { --bg: #0d1117; --fg: #e6edf3; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --dim: #8b949e; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--fg); font-family: -apple-system, 'SF Pro Text', sans-serif; font-size: 16px; padding: 32px 20px; max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 22px; margin-bottom: 4px; }
-  .sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
-  .live { color: var(--green); font-size: 12px; margin-bottom: 16px; }
-  .live.down { color: var(--yellow); }
-  textarea { width: 100%; min-height: 110px; background: #161b22; color: var(--fg); border: 1px solid #30363d; border-radius: 10px; padding: 14px; font-family: inherit; font-size: 16px; resize: vertical; }
-  .tasks { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
-  .tasks button { background: transparent; color: var(--accent); border: 1px solid #30363d; border-radius: 20px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
-  .tasks button.on { border-color: var(--accent); background: rgba(88,166,255,0.12); }
-  #run { width: 100%; background: var(--accent); color: #0d1117; border: none; border-radius: 10px; padding: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 12px; }
-  #run:disabled { opacity: 0.5; cursor: wait; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, 'SF Pro Text', sans-serif; font-size: 16px; padding: 28px 18px 60px; max-width: 620px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 2px; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+  .dot { font-size: 12px; margin-bottom: 18px; color: var(--green); }
+  .dot.off { color: var(--yellow); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
+  textarea, input { width: 100%; background: #161b22; color: var(--fg); border: 1px solid #30363d; border-radius: 10px; padding: 13px; font-family: inherit; font-size: 16px; }
+  textarea:focus, input:focus { outline: none; border-color: var(--accent); }
+  #text { min-height: 100px; resize: vertical; }
+  #opts { min-height: 86px; resize: vertical; }
+  #run { width: 100%; background: var(--accent); color: #06121f; border: none; border-radius: 12px; padding: 15px; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 6px; }
+  #run:disabled { opacity: 0.5; }
   #err { color: var(--red); font-size: 14px; margin-top: 12px; white-space: pre-wrap; }
-  #out { margin-top: 24px; display: none; }
+  #out { display: none; margin-top: 26px; padding-top: 22px; border-top: 1px solid #21262d; }
   #out.show { display: block; }
-  .decision { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
-  .decision small { font-size: 14px; color: var(--dim); font-weight: 400; }
-  .proof { font-size: 12px; color: var(--dim); margin-bottom: 14px; }
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .bar-label { width: 110px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-track { flex: 1; height: 22px; background: #21262d; border-radius: 6px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
-  .bar-fill.win { background: var(--green); }
-  .bar-value { width: 52px; text-align: right; font-size: 14px; }
-  .gate { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 14px; }
-  .gate.auto { background: rgba(63,185,80,0.12); border: 1px solid var(--green); color: var(--green); }
-  .gate.human { background: rgba(210,153,34,0.12); border: 1px solid var(--yellow); color: var(--yellow); }
-  .action { margin-top: 12px; padding: 12px 14px; border-radius: 8px; background: #161b22; border: 1px solid #30363d; font-size: 14px; }
-  .action .warn { color: var(--dim); font-size: 12px; }
+  .answer { font-size: 32px; font-weight: 800; }
+  .answer small { display: block; font-size: 14px; color: var(--dim); font-weight: 400; margin-top: 2px; }
+  .proof { font-size: 11px; color: var(--dim); margin: 8px 0 14px; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .lab { width: 118px; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track { flex: 1; height: 24px; background: #21262d; border-radius: 7px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+  .fill.win { background: var(--green); }
+  .val { width: 48px; text-align: right; font-size: 14px; }
+  .verdict { margin-top: 16px; padding: 13px 15px; border-radius: 9px; font-size: 15px; }
+  .verdict.go { background: rgba(63,185,80,0.12); border: 1px solid var(--green); color: var(--green); }
+  .verdict.wait { background: rgba(210,153,34,0.12); border: 1px solid var(--yellow); color: var(--yellow); }
+  .act { margin-top: 10px; font-size: 12px; color: var(--dim); }
 </style>
 </head>
 <body>
 <h1>Laya</h1>
-<div class="sub">Write text. Get a decision with probabilities.</div>
-<div id="live" class="live">connecting…</div>
+<div class="sub">Describe it. List the possible answers. Get the model's call.</div>
+<div id="live" class="dot">● connecting…</div>
 
-<textarea id="q" placeholder="Paste an email, message, or describe a situation…">Your account will be locked in 24h. Click here to verify your password immediately.</textarea>
-<div class="tasks" id="tasks">
-  <button data-t="phishing" class="on">Is it phishing?</button>
-  <button data-t="spam">Is it spam?</button>
-  <button data-t="urgent">Is it urgent?</button>
-  <button data-t="refund">Wants a refund?</button>
-  <button data-t="custom">Custom…</button>
+<div class="field">
+  <label for="text">Your text</label>
+  <textarea id="text" placeholder="Paste an email, a message, a situation…">Your account will be locked in 24h. Click here to verify your password immediately.</textarea>
 </div>
-<div id="custombox" style="display:none">
-  <label for="cq" style="display:block;font-size:12px;color:var(--dim);margin:10px 0 4px">What are you deciding?</label>
-  <input type="text" id="cq" value="Which folder should this go to?" style="width:100%;background:#161b22;color:var(--fg);border:1px solid #30363d;border-radius:8px;padding:10px;font-family:inherit;font-size:14px">
-  <label for="copts" style="display:block;font-size:12px;color:var(--dim);margin:10px 0 4px">Your answers — one per line, <code>label: what it means</code></label>
-  <textarea id="copts" style="min-height:80px">money-stuff: anything about payments or invoices
-people-stuff: messages from family or friends
-junk: ads or scams</textarea>
+<div class="field">
+  <label for="ask">What are you deciding?</label>
+  <input id="ask" value="What is this message?">
+</div>
+<div class="field">
+  <label for="opts">Possible answers — one per line</label>
+  <textarea id="opts">phishing — a scam to steal credentials or money
+legitimate — a genuine message
+not sure — needs a human</textarea>
 </div>
 <button id="run">Decide</button>
 <div id="err"></div>
 
 <div id="out">
-  <div class="decision" id="decision"></div>
+  <div class="answer" id="answer"></div>
   <div class="proof" id="proof"></div>
   <div id="bars"></div>
-  <div id="gate" class="gate"></div>
-  <div class="action" id="action"></div>
+  <div id="verdict" class="verdict"></div>
+  <div class="act" id="act"></div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-// Each task = fixed question the model answers about YOUR text.
-const TASKS = {
-  phishing: { type: 'choice', instructions: 'What is this message?',
-    criteria: { phishing: 'fraudulent attempt to steal credentials or money',
-      legitimate: 'genuine message from a real sender',
-      'needs-review': 'cannot decide, needs a human' } },
-  spam: { type: 'noul', instructions: 'Is this message unsolicited spam or bulk marketing?' },
-  urgent: { type: 'noul', instructions: 'Does this message communicate time pressure or a deadline?' },
-  refund: { type: 'noul', instructions: 'Does the writer ask for money back?' },
-};
-let task = 'phishing';
-document.querySelectorAll('#tasks button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('#tasks button').forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); task = b.dataset.t;
-  $('custombox').style.display = task === 'custom' ? 'block' : 'none';
-}));
-
-// Custom task: YOUR labels become the answer space — the model scores
-// whatever options you send, no retraining, no preset needed.
-function currentQuestion() {
-  if (task !== 'custom') return TASKS[task];
-  const instructions = $('cq').value.trim();
-  if (!instructions) throw new Error('Say what you are deciding.');
-  const crit = {};
-  for (const line of $('copts').value.split('\n').map(s => s.trim()).filter(Boolean)) {
-    const i = line.indexOf(':');
-    if (i < 0) crit[line] = line;
-    else crit[line.slice(0, i).trim()] = line.slice(i + 1).trim();
-  }
-  if (!Object.keys(crit).length) throw new Error('Add at least one answer option.');
-  return { type: 'choice', instructions, criteria: crit };
-}
-
 let live = false;
+
 async function health() {
   try {
-    const r = await fetch('/api/health'); const h = await r.json();
+    const h = await (await fetch('/api/health')).json();
     live = !!(h && h.ok);
-    $('live').className = 'live' + (live ? '' : ' down');
-    $('live').textContent = live ? `● live model: ${h.model}` : '○ backend offline — start `python3 viz/serve.py`';
+    $('live').className = 'dot' + (live ? '' : ' off');
+    $('live').textContent = live ? `● live: ${h.model}` : '○ offline — run: python3 viz/serve.py';
     $('run').disabled = !live;
   } catch (e) {
-    $('live').className = 'live down';
-    $('live').textContent = '○ backend offline — start `python3 viz/serve.py`';
+    $('live').className = 'dot off';
+    $('live').textContent = '○ offline — run: python3 viz/serve.py';
     $('run').disabled = true;
   }
 }
 
+// "label — meaning" or "label: meaning" or bare label per line.
+function parseOptions() {
+  const crit = {};
+  for (const line of $('opts').value.split('\n').map(s => s.trim()).filter(Boolean)) {
+    let i = line.indexOf('—');
+    if (i < 0) i = line.indexOf(':');
+    if (i < 0) crit[line] = line;
+    else crit[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+  }
+  return crit;
+}
+
 $('run').addEventListener('click', async () => {
   $('err').textContent = '';
-  const text = $('q').value.trim();
-  if (!text) { $('err').textContent = 'Write something first.'; return; }
-  $('run').disabled = true; $('run').textContent = 'Thinking…';
+  const text = $('text').value.trim();
+  const ask = $('ask').value.trim();
+  const crit = parseOptions();
+  if (!text) return $('err').textContent = 'Write your text first.';
+  if (!ask) return $('err').textContent = 'Say what you are deciding.';
+  if (!Object.keys(crit).length) return $('err').textContent = 'List at least one possible answer.';
+  $('run').disabled = true; $('run').textContent = 'Deciding…';
   try {
     const r = await fetch('/api/predict', { method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: { text }, questions: { q1: currentQuestion() } }) });
+      body: JSON.stringify({ state: { text },
+        questions: { q1: { type: 'choice', instructions: ask, criteria: crit } } }) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     show(d.answers.q1, d.usage, d.stages, d.request_id);
@@ -138,34 +122,19 @@ $('run').addEventListener('click', async () => {
 function show(a, usage, stages, reqId) {
   $('out').classList.add('show');
   usage = usage || {}; stages = stages || {};
-  let title, probs;
-  if (a.type === 'noul') {
-    const yes = a.noul;
-    title = (yes >= 0.5 ? 'YES' : 'NO') + ` <small>${(yes * 100).toFixed(0)}% sure</small>`;
-    probs = [['yes', yes], ['no', 1 - yes]];
-  } else {
-    title = `${a.choice} <small>${((a.probabilities[a.choice] || 0) * 100).toFixed(0)}%</small>`;
-    probs = Object.entries(a.probabilities || {}).sort((x, y) => y[1] - x[1]);
-  }
-  $('decision').innerHTML = title;
-  // Proof this is a fresh inference: server request #, ms that varies, tokens counted from YOUR text.
-  $('proof').textContent =
-    `run #${reqId ?? '?'} · ${stages.total_ms ?? '?'} ms · ${usage.input_tokens ?? '?'} input tokens · 0 output tokens`;
-  const top = probs.length ? probs[0][0] : null;
+  const probs = Object.entries(a.probabilities || {}).sort((x, y) => y[1] - x[1]);
+  const top = probs.length ? probs[0] : ['?', 0];
+  $('answer').innerHTML = `${top[0]}<small>${(top[1] * 100).toFixed(0)}% · confidence ${Number(a.confidence || 0).toFixed(2)}</small>`;
+  $('proof').textContent = `fresh run #${reqId ?? '?'} · ${stages.total_ms ?? '?'} ms · ${usage.input_tokens ?? '?'} tokens in, 0 out`;
   $('bars').innerHTML = probs.map(([l, p]) =>
-    `<div class="bar-row"><div class="bar-label">${l}</div>` +
-    `<div class="bar-track"><div class="bar-fill${l === top ? ' win' : ''}" style="width:${(p * 100).toFixed(1)}%"></div></div>` +
-    `<div class="bar-value">${Number(p).toFixed(2)}</div></div>`).join('');
-  const conf = a.confidence;
-  const g = $('gate');
-  if (a.type === 'noul' && conf === undefined) {
-    g.className = 'gate human'; g.textContent = 'Yes/no models report no confidence — the probability is the belief.';
-  } else if (conf >= 0.85) { g.className = 'gate auto'; g.textContent = `High confidence (${Number(conf).toFixed(2)}) — safe to act automatically.`; }
-  else { g.className = 'gate human'; g.textContent = `Low confidence (${Number(conf).toFixed(2)}) — a human should review.`; }
+    `<div class="row"><div class="lab">${l}</div>` +
+    `<div class="track"><div class="fill${l === top[0] ? ' win' : ''}" style="width:${(p * 100).toFixed(1)}%"></div></div>` +
+    `<div class="val">${Number(p).toFixed(2)}</div></div>`).join('');
+  const v = $('verdict');
+  if ((a.confidence || 0) >= 0.85) { v.className = 'verdict go'; v.textContent = 'Confident — safe to act on.'; }
+  else { v.className = 'verdict wait'; v.textContent = 'Not sure — get a human to check.'; }
   const act = a.action && a.action.act_probability;
-  $('action').innerHTML = act !== undefined
-    ? `Model action signal: <b>${act}</b><br><span class="warn">Always ≈1.0 on this checkpoint — informational only, never used for decisions.</span>`
-    : '<span class="warn">No action signal in this answer.</span>';
+  $('act').textContent = act !== undefined ? `model action signal: ${act} (always ≈1 — ignore it)` : '';
   $('out').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 health();
