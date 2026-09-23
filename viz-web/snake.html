@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laya plays Snake — every move is the model</title>
+<style>
+  :root { --bg: #0d1117; --fg: #e6edf3; --accent: #58a6ff; --green: #3fb950; --yellow: #d29922; --red: #f85149; --dim: #8b949e; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, 'SF Pro Text', sans-serif; font-size: 16px; padding: 28px 18px 60px; max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 2px; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 18px; }
+  .sub code { color: var(--fg); }
+  a { color: var(--accent); }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  button { background: var(--accent); color: #06121f; border: none; border-radius: 9px; padding: 10px 18px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid #30363d; }
+  button:disabled { opacity: 0.45; }
+  select { background: #161b22; color: var(--fg); border: 1px solid #30363d; border-radius: 8px; padding: 9px; font-size: 14px; }
+  label { font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
+  input[type=checkbox] { width: 17px; height: 17px; }
+  input[type=range] { accent-color: var(--accent); }
+  #stats { display: flex; gap: 18px; font-size: 14px; margin-bottom: 12px; }
+  #stats b { font-size: 20px; }
+  canvas { background: #010409; border: 1px solid #30363d; border-radius: 12px; width: 100%; image-rendering: pixelated; }
+  .move { margin-top: 14px; background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 13px 15px; }
+  .move .dec { font-size: 15px; margin-bottom: 8px; }
+  .shield { display: inline-block; font-size: 11px; font-weight: 800; color: #06121f; background: var(--yellow); border-radius: 5px; padding: 2px 7px; margin-left: 8px; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .lab { width: 64px; font-size: 14px; }
+  .track { flex: 1; height: 20px; background: #21262d; border-radius: 6px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); transition: width 0.2s ease; }
+  .fill.win { background: var(--green); }
+  .val { width: 48px; text-align: right; font-size: 14px; }
+  .foot { margin-top: 10px; font-size: 12px; color: var(--dim); }
+  #over { display: none; margin-top: 14px; padding: 14px; border-radius: 10px; font-size: 16px; text-align: center; }
+  #over.show { display: block; }
+  #over.dead { background: rgba(248,81,73,0.12); border: 1px solid var(--red); color: var(--red); }
+  #over.win { background: rgba(63,185,80,0.12); border: 1px solid var(--green); color: var(--green); }
+  #err { color: var(--red); font-size: 14px; margin-top: 10px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>🐍 Laya plays Snake</h1>
+<div class="sub">Every move is one real model call: text description in → direction probabilities out. <a href="/">← ask anything</a></div>
+
+<div class="bar">
+  <button id="start">▶ Play</button>
+  <button id="step1" class="ghost">Step once</button>
+  <button id="new" class="ghost">New game</button>
+  <select id="size">
+    <option value="12x8">small 12×8</option>
+    <option value="24x16" selected>classic 24×16</option>
+  </select>
+  <label><input type="checkbox" id="guarded" checked> safety shield</label>
+  <label>speed <input type="range" id="speed" min="2" max="12" value="6"></label>
+</div>
+
+<div id="stats">
+  <div>score<br><b id="score">0</b></div>
+  <div>moves<br><b id="moves">0</b></div>
+  <div>shield saves<br><b id="saves">0</b></div>
+  <div>last infer<br><b id="ms">–</b></div>
+</div>
+
+<canvas id="board" width="480" height="320"></canvas>
+
+<div class="move" id="movebox" style="display:none">
+  <div class="dec" id="dec"></div>
+  <div id="bars"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<div id="over"></div>
+<div id="err"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('board'), ctx = cv.getContext('2d');
+let session = null, playing = false, timer = null, W = 24, H = 16;
+let saves = 0;
+
+async function api(path, body) {
+  const r = await fetch(path, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+  return d;
+}
+
+async function newGame() {
+  stop();
+  const [w, h] = $('size').value.split('x').map(Number);
+  W = w; H = h;
+  cv.width = W * 20; cv.height = H * 20;
+  const d = await api('/api/snake-new', { width: W, height: H, guarded: $('guarded').checked });
+  session = d.session; saves = 0;
+  $('saves').textContent = '0';
+  $('over').className = ''; $('over').textContent = '';
+  draw(d.game); updateStats(d.game);
+  $('movebox').style.display = 'none';
+}
+
+function draw(g) {
+  const cw = cv.width / W, ch = cv.height / H;
+  ctx.fillStyle = '#010409'; ctx.fillRect(0, 0, cv.width, cv.height);
+  if (g.food) { ctx.fillStyle = '#f85149';
+    ctx.fillRect(g.food[0] * cw + 2, g.food[1] * ch + 2, cw - 4, ch - 4); }
+  g.body.forEach(([x, y], i) => {
+    ctx.fillStyle = i === 0 ? '#3fb950' : '#1f6feb';
+    ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2);
+  });
+}
+
+function updateStats(g) {
+  $('score').textContent = g.score;
+  $('moves').textContent = g.ticks;
+}
+
+function showDecision(d, g) {
+  $('movebox').style.display = 'block';
+  const probs = Object.entries(d.probabilities).sort((a, b) => b[1] - a[1]);
+  $('dec').innerHTML = `move <b>${d.executed}</b>` +
+    (d.intervened ? '<span class="shield">SHIELD</span>' : '') +
+    (d.proposed !== d.executed ? ` <span style="color:var(--dim);font-size:13px">(model wanted ${d.proposed})</span>` : '');
+  if (d.intervened) { saves++; $('saves').textContent = saves; }
+  $('bars').innerHTML = probs.map(([dir, p]) =>
+    `<div class="row"><div class="lab">${dir}</div>` +
+    `<div class="track"><div class="fill${dir === d.executed ? ' win' : ''}" style="width:${(p * 100).toFixed(1)}%"></div></div>` +
+    `<div class="val">${Number(p).toFixed(2)}</div></div>`).join('');
+  $('ms').textContent = `${d.inference_ms} ms`;
+  $('foot').textContent =
+    `dead-end risk ${d.dead_end_risk} · food reachable ${d.food_reachable} · ` +
+    `${d.input_tokens} tokens in, 0 out · planner liked ${d.planner_best}`;
+}
+
+async function step() {
+  if (!session) await newGame();
+  try {
+    const d = await api('/api/snake-step', { session });
+    draw(d.game); updateStats(d.game);
+    if (d.decision) showDecision(d.decision, d.game);
+    if (d.done) {
+      stop();
+      const o = $('over');
+      o.className = 'show ' + (d.game.won ? 'win' : 'dead');
+      o.textContent = d.game.won ? `🏆 Board cleared! Score ${d.game.score}` :
+        `💀 Game over — ${d.game.death_reason || 'trapped'}. Score ${d.game.score} in ${d.game.ticks} moves.`;
+    }
+    return !d.done;
+  } catch (e) { $('err').textContent = e.message; stop(); return false; }
+}
+
+function loop() {
+  if (!playing) return;
+  step().then(alive => {
+    if (alive && playing) timer = setTimeout(loop, 1000 / Number($('speed').value));
+    else playing = false, $('start').textContent = '▶ Play';
+  });
+}
+function stop() { playing = false; clearTimeout(timer); $('start').textContent = '▶ Play'; }
+
+$('start').addEventListener('click', async () => {
+  $('err').textContent = '';
+  if (playing) { stop(); return; }
+  if (!session) { try { await newGame(); } catch (e) { $('err').textContent = e.message; return; } }
+  playing = true; $('start').textContent = '⏸ Pause'; loop();
+});
+$('step1').addEventListener('click', async () => { stop(); $('err').textContent = ''; await step(); });
+$('new').addEventListener('click', async () => {
+  $('err').textContent = '';
+  try { await newGame(); } catch (e) { $('err').textContent = e.message; }
+});
+$('size').addEventListener('change', () => { session = null; });
+$('guarded').addEventListener('change', () => { session = null; });
+</script>
+</body>
+</html>

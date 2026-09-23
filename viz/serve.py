@@ -28,6 +28,90 @@ MODEL_ID = ""
 WEB_DIR = Path(__file__).resolve().parent.parent / "viz-web"
 LOAD_MS = 0.0
 REQ_SEQ = 0  # increments per /api/predict call — proof each Run is a fresh inference
+SNAKE = {}  # session id -> {"game": SnakeGame, "guarded": bool}
+SNAKE_LOCK = None
+
+
+def _snake_lock():
+    global SNAKE_LOCK
+    if SNAKE_LOCK is None:
+        import threading
+        SNAKE_LOCK = threading.Lock()
+    return SNAKE_LOCK
+
+
+def _snake_policy(guarded):
+    """Real LayaPolicy.decide path, wired to the resident model (no second load)."""
+    from laya_mlx.snake.policy import LayaPolicy
+    assert AGENT is not None, "model not loaded"
+    pol = LayaPolicy.__new__(LayaPolicy)
+    pol.agent = AGENT
+    pol.guarded = guarded
+    pol.prompt = "compact"
+    return pol
+
+
+def _snake_state(game):
+    return {
+        "body": [list(c) for c in game.body],
+        "food": list(game.food) if game.food else None,
+        "width": game.width, "height": game.height,
+        "score": game.score, "ticks": game.ticks,
+        "alive": game.alive, "won": game.won,
+        "death_reason": game.death_reason,
+    }
+
+
+def handle_snake_new(handler, payload):
+    import random
+    import uuid
+    from laya_mlx.snake.game import SnakeGame
+    w = min(max(int(payload.get("width", 24)), 6), 32)
+    h = min(max(int(payload.get("height", 16)), 6), 24)
+    seed = int(payload.get("seed", random.randrange(1 << 30)))
+    guarded = bool(payload.get("guarded", True))
+    game = SnakeGame(width=w, height=h, seed=seed)
+    sid = uuid.uuid4().hex[:12]
+    with _snake_lock():
+        SNAKE[sid] = {"game": game, "guarded": guarded}
+        while len(SNAKE) > 20:  # bound memory
+            SNAKE.pop(next(iter(SNAKE)))
+    handler._send_json({"session": sid, "guarded": guarded, "game": _snake_state(game)})
+
+
+def handle_snake_step(handler, payload):
+    with _snake_lock():
+        slot = SNAKE.get(payload.get("session"))
+        if slot is None:
+            handler._send_json({"error": "unknown session — start a new game"}, status=400)
+            return
+        game, guarded = slot["game"], slot["guarded"]
+        if not game.alive or game.won:
+            handler._send_json({"game": _snake_state(game), "done": True})
+            return
+        assert AGENT is not None, "model not loaded"
+        try:
+            dec = _snake_policy(guarded).decide(game)
+        except RuntimeError as e:  # cycle-safety invariant: truly trapped
+            handler._send_json({"game": _snake_state(game), "done": True,
+                                "error": str(e)})
+            return
+        game.step(dec.executed)
+        handler._send_json({
+            "game": _snake_state(game),
+            "done": not game.alive or game.won,
+            "decision": {
+                "probabilities": dec.probabilities,
+                "proposed": dec.proposed,
+                "executed": dec.executed,
+                "intervened": dec.intervened,
+                "planner_best": dec.planner_best,
+                "dead_end_risk": round(dec.dead_end_risk, 4),
+                "food_reachable": round(dec.food_reachable, 4),
+                "inference_ms": round(dec.inference_ms, 2),
+                "input_tokens": dec.input_tokens,
+            },
+        })
 
 MIME = {
     ".html": "text/html; charset=utf-8",
@@ -89,12 +173,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/api/predict":
+        if parsed.path not in ("/api/predict", "/api/snake-new", "/api/snake-step"):
             self.send_error(404, "not found")
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(length) or b"{}")
+            if parsed.path == "/api/snake-new":
+                handle_snake_new(self, payload)
+                return
+            if parsed.path == "/api/snake-step":
+                handle_snake_step(self, payload)
+                return
             state = payload.get("state")
             questions = payload.get("questions")
             if not isinstance(state, dict) or not isinstance(questions, dict) or not questions:
