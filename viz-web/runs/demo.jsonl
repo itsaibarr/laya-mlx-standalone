@@ -1,0 +1,1 @@
+{"input":{"tokens":47,"head_max_len":192},"stages":{"load_ms":8542.1,"total_ms":12.3},"internals":{"marker_logits_raw":[2.1,0.3,-1.2],"temperature":{"choice":1.0}},"output":{"type":"choice","confidence":0.8712,"choice":"escalate","probabilities":{"escalate":0.8712,"auto-route":0.1103,"dismiss":0.0185},"action":{"act_probability":0.9234}}}
